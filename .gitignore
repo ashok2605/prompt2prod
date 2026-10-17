@@ -16,3 +16,5 @@ deck/preview/
 deck/deck.html
 video/raw/
 video/build/
+deck/shots/
+deck/*.pdf

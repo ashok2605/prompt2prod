@@ -28,7 +28,7 @@
     },
     {
       "id": "s07_verify_release",
-      "text": "The Verifier runs AI-written smoke tests against the live preview, and Gemini even looks at a screenshot to confirm the UI change. Every gate passed, so Autopilot shifts one hundred percent of traffic to the new revision. Prompt to production in about two minutes, for around fifteen cents of Gemini tokens."
+      "text": "The Verifier runs AI-written smoke tests against the live preview, and Gemini even looks at a screenshot to confirm the UI change. Every gate passed, so Autopilot shifts one hundred percent of traffic to the new revision. Prompt to production in under two and a half minutes, for less than twenty cents of Gemini tokens."
     },
     {
       "id": "s08_inspect",
@@ -45,6 +45,10 @@
     {
       "id": "s11_arch",
       "text": "Under the hood: Gemini on Vertex AI with ADK agents; Cloud Run for the API, the sandbox jobs and preview revisions; Cloud Build and Artifact Registry; Firestore for the live event stream; and Firebase for authentication, hosting and real-time updates."
+    },
+    {
+      "id": "s11b_guardrails",
+      "text": "Safety is built in. Every request runs in its own sandbox; the deployed app runs with zero cloud permissions; Autopilot only ships when every gate passes; and every plan, diff, test and release is recorded for audit."
     },
     {
       "id": "s12_close",

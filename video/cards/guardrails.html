@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="base.css">
+<style>
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 56px; }
+.g { border-radius: 24px; padding: 34px 38px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); }
+.g .t { font-size: 40px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+.g .x { font-size: 28px; color: #b8bfcc; line-height: 1.4; }
+</style></head><body>
+<div class="wrap">
+  <div class="eyebrow">Built-in guardrails</div>
+  <div class="grid">
+    <div class="g"><div class="t">🔒 Isolated sandbox</div><div class="x">Every request runs in its own Cloud Run Job container on a fresh git branch; agents can only touch the repo.</div></div>
+    <div class="g"><div class="t">🪪 Zero-permission app</div><div class="x">The deployed app runs as a service account with no IAM roles. Dashboards are read-only by security rules.</div></div>
+    <div class="g"><div class="t">🚦 Gates before production</div><div class="x">Tests, AI review and live checks must all pass — or a human approves. Rollback is one click.</div></div>
+    <div class="g"><div class="t">🧾 Full audit trail</div><div class="x">Plan, diff, tests, review, build, release and rollback are recorded for every change.</div></div>
+  </div>
+</div>
+<div class="foot"><span>Prompt2Prod</span><span>Rate limits · cost metering per change</span></div>
+</body></html>

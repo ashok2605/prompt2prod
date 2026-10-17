@@ -3,6 +3,7 @@
     python video/assemble.py            # → video/build/prompt2prod-demo.mp4
 """
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -13,10 +14,11 @@ RAW = BUILD / "raw"
 AUDIO = BUILD / "audio"
 SCENES_DIR = BUILD / "scenes"
 FFMPEG = "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg"
+FFPROBE = "/opt/homebrew/opt/ffmpeg-full/bin/ffprobe"
 FPS = 30
 W, H = 1920, 1080
-LEAD_IN = 0.45  # seconds of silence before narration starts in each scene
-TAIL = 0.55     # breathing room after narration
+LEAD_IN = 0.6   # seconds of silence before narration starts in each scene
+TAIL = 0.9      # breathing room after narration
 
 
 def run(cmd):
@@ -49,6 +51,12 @@ def audio_filter(narration, total):
     return (["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"], f"[1:a]atrim=0:{total:.3f}[a]")
 
 
+def probe_duration(path):
+    out = subprocess.run([FFPROBE, "-v", "error", "-show_entries", "format=duration",
+                          "-of", "default=nw=1:nk=1", str(path)], capture_output=True, text=True).stdout
+    return float(out.strip())
+
+
 def render_card(scene, durations):
     narr = scene.get("narration")
     total = max((durations.get(narr, 0) + LEAD_IN + TAIL) if narr else 0, scene.get("min", 3))
@@ -79,8 +87,12 @@ def render_clip(scene, durations, master, t0, markers):
     extra_in, afilter = audio_filter(narr, target)
     if speed >= 1:
         vchain = f"setpts=(PTS-STARTPTS)/{speed:.5f}"
-    else:  # raw footage shorter than narration: play at 1x, then hold the last frame
-        vchain = f"setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={target - raw_len + 0.1:.3f}"
+    else:  # raw footage shorter than narration: gentle slow-motion first, then hold the last frame
+        slow = max(speed, scene.get("min_speed", 0.55))
+        played = raw_len / slow
+        vchain = f"setpts=(PTS-STARTPTS)/{slow:.5f}"
+        if played < target:
+            vchain += f",tpad=stop_mode=clone:stop_duration={target - played + 0.1:.3f}"
     vf = f"[0:v]{vchain},fps={FPS},trim=0:{target:.3f},format=yuv420p[v]"
     run([FFMPEG, "-y", "-ss", f"{start:.3f}", "-t", f"{raw_len:.3f}", "-i", str(master), *extra_in,
          "-filter_complex", f"{vf};{afilter}", "-map", "[v]", "-map", "[a]", "-t", f"{target:.3f}",
@@ -96,14 +108,26 @@ def ass_time(t):
 
 
 def chunk_text(text, max_words=11):
-    parts = re.split(r"(?<=[.!?;:])\s+|,\s+(?=\S)", text)
-    chunks = []
+    """Split narration into caption-sized chunks without one-word orphans."""
+    parts = [p for p in re.split(r"(?<=[.!?;:])\s+|,\s+(?=\S)", text) if p.strip()]
+    merged = []
     for part in parts:
+        prev = merged[-1] if merged else None
+        if prev and (len(prev.split()) < 4 or len(part.split()) < 3) and len(prev.split()) + len(part.split()) <= 12:
+            joiner = " " if prev.endswith((".", "!", "?", ";", ":")) else ", "
+            merged[-1] = prev + joiner + part
+        else:
+            merged.append(part)
+    chunks = []
+    for part in merged:
         words = part.split()
         while words:
-            chunks.append(" ".join(words[:max_words]))
-            words = words[max_words:]
-    return [c for c in chunks if c.strip()]
+            take = max_words
+            if max_words < len(words) <= max_words + 4:  # split evenly instead of leaving a tiny tail
+                take = (len(words) + 1) // 2
+            chunks.append(" ".join(words[:take]))
+            words = words[take:]
+    return chunks
 
 
 def write_captions(timeline, narration_text, durations):
@@ -138,11 +162,16 @@ def main():
     scenes = json.loads((HERE / "scenes.json").read_text())
     durations = json.loads((AUDIO / "durations.json").read_text())
     narration_text = {s["id"]: s["text"] for s in json.loads((HERE / "narration.json").read_text())["segments"]}
-    master, t0 = build_raw_video()
+    reuse = os.environ.get("REUSE") == "1"
+    master, t0 = (BUILD / "master.mp4", json.loads((RAW / "frames.json").read_text())[0]["ts"]) if reuse \
+        else build_raw_video()
     markers = json.loads((RAW / "markers.json").read_text())
     parts, timeline, clock = [], [], 0.0
     for scene in scenes:
-        if scene["type"] == "card":
+        cached = SCENES_DIR / f"{scene['id']}.mp4"
+        if reuse and cached.exists():
+            out, dur = cached, probe_duration(cached)
+        elif scene["type"] == "card":
             out, dur = render_card(scene, durations)
         else:
             out, dur = render_clip(scene, durations, master, t0, markers)

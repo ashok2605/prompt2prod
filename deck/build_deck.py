@@ -25,12 +25,25 @@ API = LINKS.get("api", "https://prompt2prod-82783179546.asia-south1.run.app")
 APP = LINKS.get("app", "https://acme-tasks-82783179546.asia-south1.run.app")
 
 
-def img(path):
+def img(path, max_w=1700, quality=86):
+    """Embed an image; large ones are downscaled to JPEG so the PDF stays under the 5 MB limit."""
     p = pathlib.Path(path)
     if not p.exists():
         return None
+    data = p.read_bytes()
+    if len(data) > 350_000:
+        import io
+
+        from PIL import Image  # noqa: WPS433
+
+        im = Image.open(io.BytesIO(data)).convert("RGB")
+        if im.width > max_w:
+            im = im.resize((max_w, round(im.height * max_w / im.width)), Image.LANCZOS)
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=quality, optimize=True, progressive=True)
+        return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
     mime = "image/png" if p.suffix == ".png" else "image/jpeg"
-    return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode()
+    return f"data:{mime};base64," + base64.b64encode(data).decode()
 
 
 MEDIA = ROOT / "template_media"
@@ -203,7 +216,7 @@ slides.append(content_slide("Opportunities", f"""
 
 # 5 — Features
 feats = [
-    ("🗣️", "Natural-language intake", "Dashboard, voice (Web Speech), REST & webhook (GitHub/Slack/Jira style)."),
+    ("🗣️", "Natural-language intake", "Dashboard, voice (Web Speech), developer CLI, REST/webhook intake."),
     ("🧭", "Planner agent", "Repo-aware plan, acceptance criteria, risk & effort estimate; declines unsafe asks."),
     ("🧪", "Tests-first", "Test Author writes failing pytest tests before any code changes (TDD red)."),
     ("💻", "Coder agent", "Sandboxed read/write/edit/search/run-tests tools; iterates to green."),
@@ -282,10 +295,10 @@ slides.append(content_slide("Estimated implementation cost (optional)", f"""
 # 11 — Snapshots
 slides.append(content_slide("Snapshots of the prototype", f"""
 <div class="grid2">
-  {shot("task-diff", "AI-written diff with tests, reviewed and committed")}
-  {shot("task-preview", "Live preview revision embedded in the task view")}
-  {shot("insights", "Insights — DORA metrics computed from real runs")}
-  {shot("releases", "Releases — production history with one-click rollback")}
+  {shot("crop-diff", "AI-written diff (6 files, +96 −13), tested, reviewed 100/100 and committed")}
+  {shot("crop-preview", "Live preview: the tagged Cloud Run revision embedded in the task view")}
+  {shot("crop-insights", "Insights — DORA & AI-productivity metrics computed from real runs")}
+  {shot("crop-releases", "Releases — autopilot & human-approved releases, rollbacks, revisions, commits")}
 </div>"""))
 
 # 12 — Performance / benchmarking
@@ -316,6 +329,9 @@ slides.append(content_slide("Prototype Performance report/Benchmarking", f"""
   <div class="col">
     <div class="ch">Average seconds per stage</div>
     <div class="bars">{bars}</div>
+    <div class="catch"><b>Real catch, task m5cahc:</b> the AI Reviewer flagged a CSS selector typo
+    (<code>.new-task</code> → <code>.new_task</code>) that would have broken the form styling — invisible to every unit test.
+    The Coder fixed it automatically, the re-review approved, and Autopilot shipped it in 3m 03s.</div>
   </div>
 </div>"""))
 
@@ -381,21 +397,21 @@ body { font-family: 'Google Sans Flex', 'Google Sans', Inter, sans-serif; color:
 .kl { font-size: 11.5px; color: #5f6368; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; height: 100%; }
 .slide .grid3 .card { border-radius: 14px; border: 1px solid #e3e8f2; border-top: 4px solid var(--c); padding: 12px 14px; background: #fff; box-shadow: 0 2px 8px rgba(31,35,41,.05); }
-.ct { font-weight: 600; font-size: 14.5px; margin-bottom: 6px; }
-.cx { font-size: 12px; color: #3c4043; }
+.ct { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
+.cx { font-size: 13.4px; color: #3c4043; line-height: 1.5; }
 .cx ul { margin: 0; padding-left: 16px; }
-.cx li { margin: 2px 0; }
-.feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px 12px; }
-.feat { display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px; border-radius: 12px; background: #f6f8fc; border: 1px solid #e8ecf4; }
+.cx li { margin: 4px 0; }
+.feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 14px; }
+.feat { display: flex; gap: 10px; align-items: flex-start; padding: 12px 12px; border-radius: 12px; background: #f6f8fc; border: 1px solid #e8ecf4; }
 .fi { font-size: 20px; line-height: 1; }
-.ft { font-weight: 600; font-size: 12.8px; }
-.fx { font-size: 11px; color: #5f6368; line-height: 1.35; }
+.ft { font-weight: 600; font-size: 14px; }
+.fx { font-size: 12px; color: #5f6368; line-height: 1.4; }
 .diagram { width: 100%; height: 100%; object-fit: contain; object-position: top center; }
 .shot { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .shot img { width: 100%; border-radius: 10px; border: 1px solid #dfe3eb; box-shadow: 0 4px 14px rgba(31,35,41,.10); object-fit: cover; object-position: top left; }
 .cols .shot img { height: 360px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; height: 100%; }
-.grid2 .shot img { height: 172px; }
+.grid2 .shot img { height: 172px; object-fit: cover; object-position: top center; }
 .cap { font-size: 10.5px; color: #5f6368; }
 .shot.missing { border: 2px dashed #c7ccd6; border-radius: 10px; display: grid; place-items: center; color: #9aa0a6; min-height: 150px; }
 .tech { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px 12px; }
@@ -411,6 +427,8 @@ body { font-family: 'Google Sans Flex', 'Google Sans', Inter, sans-serif; color:
 .tbl.small td, .tbl.small th { padding: 5px 6px; }
 .tbl.small td:not(:first-child), .tbl.small th:not(:first-child) { text-align: right; white-space: nowrap; }
 .ch { font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+.catch { margin-top: 16px; padding: 10px 12px; border-radius: 10px; background: #fff7e6; border: 1px solid #f6d68a; font-size: 11.5px; line-height: 1.45; color: #3c4043; }
+.catch code { font-size: 10.5px; background: #fdeec8; padding: 0 3px; border-radius: 4px; }
 .bars { display: grid; gap: 7px; }
 .bar { display: grid; grid-template-columns: 78px 1fr 34px; align-items: center; gap: 8px; font-size: 11.5px; }
 .bt { height: 12px; background: #eef1f6; border-radius: 4px; overflow: hidden; }

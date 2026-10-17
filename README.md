@@ -1,5 +1,7 @@
 # Prompt2Prod — from a developer's prompt to production
 
+[![CI](https://github.com/ashok2605/prompt2prod/actions/workflows/ci.yml/badge.svg)](https://github.com/ashok2605/prompt2prod/actions/workflows/ci.yml) ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Cloud%20Run%20·%20Cloud%20Build%20·%20Firestore-4285F4) ![Gemini](https://img.shields.io/badge/Gemini-3.1%20Pro%20·%203.6%20Flash-8E75B2) ![Firebase](https://img.shields.io/badge/Firebase-Auth%20·%20Hosting%20·%20Realtime-FFCA28)
+
 **An autonomous AI dev crew on Google Cloud.** Describe a change in plain English — typed, spoken, or sent from any tool
 via REST/webhook — and a team of Gemini agents built with **Google ADK** plans it, writes failing tests first, implements it,
 heals its own test failures, reviews the diff, builds it with **Cloud Build**, deploys a **live preview revision on Cloud Run**,
@@ -12,8 +14,11 @@ one-click human approval. Every thought, tool call and test run streams live to 
 |---|---|
 | 🚀 **Live dashboard** | https://prompt2prod.web.app (Firebase Hosting) · https://prompt2prod-82783179546.asia-south1.run.app (Cloud Run) |
 | 🧪 **Demo app the crew evolves** | https://acme-tasks-82783179546.asia-south1.run.app |
-| 🎬 **Demo video** | _see submission_ |
+| 🎬 **Demo video (3 min)** | https://youtu.be/7gPnEYwUhyk |
+| 📊 **Pitch deck** | [docs/Prompt2Prod-AgenticMinds-deck.pdf](docs/Prompt2Prod-AgenticMinds-deck.pdf) |
 | 📑 **API docs** | https://prompt2prod-82783179546.asia-south1.run.app/docs |
+
+![Live pipeline](docs/screenshots/task-live.jpg)
 
 ![Process](docs/diagrams/process.png)
 
@@ -66,12 +71,21 @@ loop from *"what I want"* to *"it's live and verified"*. Prompt2Prod does — on
 
 ## Measured results
 
-From real end-to-end runs on the demo app (see the dashboard's *Insights* page for live numbers):
+From 9 real end-to-end runs on the demo app (live numbers on the dashboard's *Insights* page):
 
-- **≈ 2 minutes** median from prompt to production in Autopilot (first untuned run: 5 m 15 s).
-- **≈ $0.11–0.25** of Gemini tokens per shipped change (~16 LLM calls, ~120K tokens).
-- **~20 s** Cloud Build with cached layers, **~10 s** to a live preview revision.
-- Every change ships with new tests written by the AI, an AI review score and live smoke checks.
+- **1 m 51 s** median pipeline (plan → tests → code → review → build → preview → verify → release) and **≈ 2.5 min** median
+  from prompt to production on Autopilot. The first, untuned run took 5 m 15 s.
+- **$0.05 – $0.22** of Gemini tokens per shipped change (16–29 LLM calls, ~120–275K tokens).
+- **~20 s** Cloud Build with cached layers, **~11 s** to a live preview revision.
+- Every run ended with a green suite including new AI-written tests and a 95–100 AI review score.
+- **A real catch:** in task `m5cahc` the Reviewer (Gemini 3.1 Pro) flagged a CSS selector typo (`.new-task` → `.new_task`)
+  that would have broken the form styling, something no unit test caught. The Coder fixed it automatically and the re-review approved.
+
+| Command Center | Releases |
+|---|---|
+| ![Command Center](docs/screenshots/command-center.jpg) | ![Releases](docs/screenshots/releases.jpg) |
+| **Live preview in the task view** | **Insights (DORA)** |
+| ![Preview](docs/screenshots/task-preview.jpg) | ![Insights](docs/screenshots/insights.jpg) |
 
 ## Try it
 
