@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Tasks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">A</span>
+      <div>
+        <h1>Acme Tasks</h1>
+        <p class="tagline">What the team is working on</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <form id="new-task" class="new-task" autocomplete="off">
+        <input id="title" name="title" type="text" placeholder="Add a task…" aria-label="Task title">
+        <input id="assignee" name="assignee" type="text" placeholder="Assignee" aria-label="Assignee">
+        <button type="submit">Add task</button>
+      </form>
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+    </section>
+
+    <section class="card">
+      <div class="list-header">
+        <h2>Tasks</h2>
+        <span id="summary" class="summary">{{ tasks|selectattr('done')|list|length }} of {{ tasks|length }} done</span>
+      </div>
+      <ul id="task-list" class="task-list">
+        {% for task in tasks %}
+        <li class="task{% if task.done %} done{% endif %}" data-id="{{ task.id }}">
+          <label class="check">
+            <input type="checkbox" {% if task.done %}checked{% endif %} aria-label="Mark done">
+            <span class="title">{{ task.title }}</span>
+          </label>
+          {% if task.assignee %}<span class="assignee" title="{{ task.assignee }}">{{ task.assignee[:1] }}</span>{% endif %}
+          <button class="delete" aria-label="Delete task">×</button>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Served by <code>{{ info.revision }}</code> on Cloud Run
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+.venv/
+node_modules/
+dashboard/dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+*.log
+firebase-debug.log
+.firebase/
+# hackathon template artwork & intermediate renders stay local
+deck/template.pptx
+deck/template_x/
+deck/template_media/
+deck/preview/
+deck/deck.html
+video/raw/
+video/build/

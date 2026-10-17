@@ -1,0 +1,11 @@
+# Build config used for target apps (baseline + every AI-generated change).
+steps:
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args: ['-c', 'docker pull ${_IMAGE}:latest || true']
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '--build-arg', 'BUILDKIT_INLINE_CACHE=1', '--cache-from', '${_IMAGE}:latest',
+           '-t', '${_IMAGE}:${_TAG}', '-t', '${_IMAGE}:latest', '.']
+images: ['${_IMAGE}:${_TAG}', '${_IMAGE}:latest']
+options:
+  logging: CLOUD_LOGGING_ONLY

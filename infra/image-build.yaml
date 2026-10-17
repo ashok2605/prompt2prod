@@ -1,0 +1,12 @@
+# Builds the Prompt2Prod image (API + agent runner). Usage:
+#   gcloud builds submit . --region=asia-south1 --config=infra/image-build.yaml --substitutions=_TAG=v1
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', '${_DOCKERFILE}', '-t', '${_IMAGE}:${_TAG}', '-t', '${_IMAGE}:latest', '.']
+images: ['${_IMAGE}:${_TAG}', '${_IMAGE}:latest']
+substitutions:
+  _IMAGE: asia-south1-docker.pkg.dev/project-b7607e7e-cc83-423b-8a1/prompt2prod/prompt2prod
+  _DOCKERFILE: Dockerfile
+  _TAG: dev
+options:
+  logging: CLOUD_LOGGING_ONLY
