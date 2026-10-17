@@ -1,0 +1,5 @@
+Prompt2Prod is an autonomous AI dev crew. A developer types or speaks a change (or sends it via REST/webhook) and five Gemini agents built with Google ADK ship it end-to-end: plan, write failing tests first, code with sandboxed tools, self-heal test failures, AI code review, build, deploy a live preview, run AI smoke tests on it, then release on Autopilot or after one-click approval, with instant rollback. Measured: ~2 min from prompt to production, ~$0.10 per change.
+Gemini: 3.1 Pro (planner, reviewer) and 3.6 Flash (tests, coder, verifier) on Vertex AI.
+Cloud Run: API + dashboard, an isolated Cloud Run Job per request, and every change as a tagged preview revision; release/rollback = traffic switch. Cloud Build + Artifact Registry build images.
+Firestore: tasks, live agent event stream, release history, locks.
+Firebase: Auth, Hosting (prompt2prod.web.app) and realtime listeners that stream every thought, tool call and test run to the dashboard.

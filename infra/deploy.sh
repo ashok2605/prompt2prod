@@ -54,7 +54,7 @@ gcloud run jobs deploy prompt2prod-runner --image="${IMAGE}:${TAG}" --region="$R
 
 echo "▶ API + dashboard (Cloud Run service)"
 gcloud run deploy prompt2prod --image="${IMAGE}:${TAG}" --region="$REGION" --service-account="$SA" \
-  --allow-unauthenticated --cpu=1 --memory=1Gi --min-instances=1 --max-instances=4 --no-cpu-throttling \
+  --allow-unauthenticated --cpu=1 --memory=1Gi --min-instances=1 --max-instances=4 --cpu-throttling \
   --timeout=900 --set-env-vars="EXECUTION_MODE=job,APP_VERSION=${TAG}" --project "$PROJECT_ID"
 
 echo "▶ Demo project (baseline revision of the sample app)"

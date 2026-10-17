@@ -7,6 +7,7 @@ import time
 import traceback
 
 import httpx
+from urllib.parse import urlparse
 
 from . import agents, cloud, config, gitrepo, release, sandbox, store
 from .agents import PlanOut, ReviewOut, Toolkit, Usage, VerifyOut, run_agent
@@ -443,17 +444,63 @@ class Pipeline:
             emit=self.emit, stage="verify", label="Verifier", usage=self.usage, output_schema=VerifyOut,
         )
         self.models["verifier"] = model
-        checks = (out or {}).get("checks", [])[:8]
-        results = []
+        checks = self.sanitize_checks((out or {}).get("checks", []), url)
+        results, failures = await self.run_checks(checks, url)
+        if failures:
+            # Agentic self-correction: show the Verifier what the live app actually returned so it can tell a
+            # genuine defect (keep the check failing) from a badly-written check (fix the expectation).
+            self.emit("verify", "Verifier", "info",
+                      f"Re-examining {len(failures)} failing check(s) against the live responses")
+            evidence = json.dumps(failures, indent=2)[:12000]
+            retry_prompt = (
+                prompt + "\n\nYou already ran these checks against the live preview and they FAILED. Actual responses:\n"
+                + evidence + "\n\nReturn the complete list of checks again. If a failure reveals a genuine defect "
+                "(the acceptance criteria are not met), keep that check exactly as it was. If the check itself was "
+                "wrong (wrong path, method, status or expected text that the correct implementation would never "
+                "produce), fix it. Never drop a check just because it fails."
+            )
+            _, out2, _ = await run_agent(
+                role="verifier", name="verifier", instruction=agents.VERIFIER_INSTRUCTION, prompt=retry_prompt,
+                emit=self.emit, stage="verify", label="Verifier", usage=self.usage, output_schema=VerifyOut,
+            )
+            checks2 = self.sanitize_checks((out2 or {}).get("checks", []), url)
+            if checks2:
+                results, failures = await self.run_checks(checks2, url)
+        passed = bool(results) and not failures
+        store.update_task(self.id, {"verify": {"passed": passed, "checks": results}})
+        n_ok = sum(r["ok"] for r in results)
+        self.stage("verify", "done", f"{n_ok}/{len(results)} live checks passed")
+        return {"passed": passed, "checks": results}
+
+    def sanitize_checks(self, raw, url):
+        base = urlparse(url)
+        checks = []
+        for check in raw[:8]:
+            path = (check.get("path") or "").strip()
+            if path.startswith(("http://", "https://")):
+                parsed = urlparse(path)
+                if parsed.netloc != base.netloc:
+                    self.emit("verify", "Verifier", "info", f"Skipped off-site check: {check.get('name')}")
+                    continue
+                path = (parsed.path or "/") + (f"?{parsed.query}" if parsed.query else "")
+            if path.lower().startswith(("javascript:", "#")) or " " in path:
+                self.emit("verify", "Verifier", "info", f"Skipped a non-HTTP check: {check.get('name')}")
+                continue
+            check["path"] = "/" + path.lstrip("/")
+            checks.append(check)
+        return checks
+
+    async def run_checks(self, checks, url):
+        results, failures = [], []
         async with httpx.AsyncClient(timeout=20, follow_redirects=True) as http:
             for check in checks:
-                check["path"] = "/" + (check.get("path") or "").lstrip("/")
                 started = time.time()
-                status_code, ok, detail = None, False, ""
+                status_code, ok, detail, excerpt = None, False, "", ""
                 try:
                     body = json.loads(check["json_body"]) if check.get("json_body") else None
                     res = await http.request(check["method"], url + check["path"], json=body)
                     status_code = res.status_code
+                    excerpt = res.text[:700]
                     missing = [s for s in check.get("expect_contains", []) if not body_contains(res, s)]
                     ok = status_code == check["expect_status"] and not missing
                     if status_code != check["expect_status"]:
@@ -469,14 +516,13 @@ class Pipeline:
                 results.append({"name": check["name"], "method": check["method"], "path": check["path"],
                                 "expectStatus": check["expect_status"], "status": status_code, "ok": ok,
                                 "ms": ms, "detail": detail})
+                if not ok:
+                    failures.append({**check, "actual_status": status_code, "problem": detail,
+                                     "actual_body_excerpt": excerpt})
                 self.emit("verify", "Verifier", "success" if ok else "warn",
                           f"{'✓' if ok else '✗'} {check['name']} — {check['method']} {check['path']} → "
                           f"{status_code} ({ms} ms)", None if ok else detail)
-        passed = bool(results) and all(r["ok"] for r in results)
-        store.update_task(self.id, {"verify": {"passed": passed, "checks": results}})
-        n_ok = sum(r["ok"] for r in results)
-        self.stage("verify", "done", f"{n_ok}/{len(results)} live checks passed")
-        return {"passed": passed, "checks": results}
+        return results, failures
 
     async def release(self, review, verify, url):
         self.stage("release", "running")

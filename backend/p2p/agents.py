@@ -103,7 +103,11 @@ Design 3-6 HTTP smoke checks that prove the requested behaviour works in the dep
 - Each check: name, method, path, optional json_body (a JSON string), expect_status, expect_contains (short, exact, robust substrings such as a JSON key or a visible label).
 - Use the actual routes and response shapes from the diff and code. Prefer read-only checks; POST is fine for creation/validation behaviour.
 - Keep expect_contains minimal: a JSON key like "priority" or a single value like "high" — never a multi-field JSON fragment (Flask returns compact JSON).
-- The app has seed data and in-memory state; do not depend on ids created by other checks."""
+- The app has seed data and in-memory state; do not depend on ids created by other checks.
+- Checks are plain HTTP requests: no browser, no JavaScript execution. Verify UI changes by GETting the page ("/") or a
+  static asset (e.g. "/static/app.js", "/static/style.css") and checking for the expected markup, ids, classes or text.
+- path must be a real route starting with "/" — never a URL, fragment or "javascript:" pseudo-link.
+- When creating data, prefix titles with "[smoke]" so it is recognisable."""
 
 
 # ---------------------------------------------------------------- usage meter

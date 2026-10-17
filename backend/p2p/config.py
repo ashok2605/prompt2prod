@@ -52,8 +52,8 @@ MODEL_PRICES = {
 }
 
 MAX_TEST_ATTEMPTS = int(os.environ.get("MAX_TEST_ATTEMPTS", "3"))
-LIMIT_PER_USER_PER_HOUR = int(os.environ.get("LIMIT_PER_USER_PER_HOUR", "8"))
-LIMIT_PER_DAY = int(os.environ.get("LIMIT_PER_DAY", "80"))
+LIMIT_PER_USER_PER_HOUR = int(os.environ.get("LIMIT_PER_USER_PER_HOUR", "6"))
+LIMIT_PER_DAY = int(os.environ.get("LIMIT_PER_DAY", "40"))
 INTAKE_KEY = os.environ.get("INTAKE_KEY", "REDACTED_INTAKE_KEY")
 PREVIEW_TAGS_TO_KEEP = int(os.environ.get("PREVIEW_TAGS_TO_KEEP", "12"))
 
