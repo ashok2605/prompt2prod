@@ -21,6 +21,7 @@ from recorder import Screencast  # noqa: E402
 DASHBOARD = os.environ.get("DASHBOARD_URL", "https://prompt2prod.web.app/")
 APP_URL = "https://acme-tasks-82783179546.asia-south1.run.app/"
 OUT = pathlib.Path(__file__).parent / "build" / "raw"
+SHOTS = pathlib.Path(__file__).resolve().parents[1] / "deck" / "shots"
 PROMPT = sys.argv[1] if len(sys.argv) > 1 else (
     "Add a priority field (low / medium / high, default medium) to tasks. Validate it in the API "
     "(400 with a helpful error for invalid values) and show it as a colored badge next to each task."
@@ -54,7 +55,7 @@ def main():
         context = browser.new_context(viewport={"width": 1440, "height": 810}, device_scale_factor=1.3334,
                                       color_scheme="dark")
         page = context.new_page()
-        page.goto(DASHBOARD, wait_until="networkidle")
+        page.goto(DASHBOARD, wait_until="load")
         page.wait_for_timeout(3500)
         cast = Screencast(page, OUT)
         cast.start()
@@ -66,7 +67,7 @@ def main():
         smooth_scroll(page, None, -420, steps=30, pause=90)
         cast.wait(1.0)
 
-        name = page.get_by_placeholder("Your name")
+        name = page.get_by_placeholder("e.g. Ashok")
         if name.count():
             name.first.fill("Ashok")
         box = page.locator("textarea").first
@@ -97,6 +98,10 @@ def main():
                     cast.mark(f"{key}_done")
                     if key in tab_for:
                         click_tab(page, tab_for[key])
+                    if key == "code":
+                        SHOTS.mkdir(exist_ok=True)
+                        page.wait_for_timeout(600)
+                        page.screenshot(path=str(SHOTS / "task-live.png"))
             if task.get("status") in ("deployed", "awaiting_approval", "failed", "rejected"):
                 cast.mark("released" if task["status"] == "deployed" else f"ended_{task['status']}")
                 break
@@ -104,17 +109,17 @@ def main():
         cast.wait(2.0)
 
         # inspect: diff → tests → review, then the feature live in production
+        cast.mark("inspect_start")
         for tab, pause in (("Diff", 3.5), ("Tests", 3.0), ("Review", 3.0)):
             click_tab(page, tab)
             cast.wait(pause)
-        cast.mark("inspect_app")
         page.goto(APP_URL, wait_until="networkidle")
         cast.restart()
         cast.wait(4.5)
         cast.mark("inspect_done")
 
         # control: approval mode + one-click rollback
-        page.goto(DASHBOARD + f"#/task/{task_id}", wait_until="networkidle")
+        page.goto(DASHBOARD + f"#/task/{task_id}", wait_until="load")
         cast.restart()
         cast.wait(2.5)
         cast.mark("control_start")
@@ -134,7 +139,7 @@ def main():
         cast.mark("rollback_done")
 
         # insights
-        page.goto(DASHBOARD + "#/insights", wait_until="networkidle")
+        page.goto(DASHBOARD + "#/insights", wait_until="load")
         cast.restart()
         cast.wait(2.0)
         cast.mark("insights")

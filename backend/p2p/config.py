@@ -38,9 +38,12 @@ THINKING = {
 }
 FALLBACK_MODELS = [
     m.strip()
-    for m in os.environ.get("FALLBACK_MODELS", "gemini-3.5-flash,gemini-2.5-pro,gemini-2.5-flash").split(",")
+    for m in os.environ.get("FALLBACK_MODELS", "gemini-3.6-flash,gemini-3.5-flash,gemini-2.5-flash").split(",")
     if m.strip()
 ]
+
+# Latency guard: if an agent run exceeds its budget (preview models can spike), retry on the next model.
+AGENT_TIMEOUTS = {"planner": 45, "reviewer": 40, "verifier": 45, "test_author": 120, "coder": 240}
 
 # Approximate list prices (USD per 1M tokens: input, output) used for the cost meter.
 MODEL_PRICES = {

@@ -14,9 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /srv
 COPY backend/requirements.txt ./requirements.txt
-# Sandbox toolchain for the demo projects is pre-installed so test runs start instantly.
+# Sandbox toolchain (pytest for the demo projects, headless Chromium for visual QA) is pre-installed.
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir "flask==3.1.*" "gunicorn==23.*" "pytest==8.*"
+    && pip install --no-cache-dir "flask==3.1.*" "gunicorn==23.*" "pytest==8.*" "playwright==1.*" \
+    && python -m playwright install --with-deps --only-shell chromium \
+    && rm -rf /var/lib/apt/lists/*
 COPY backend/p2p ./p2p
 COPY backend/scripts ./scripts
 COPY --from=web /web/dist ./static

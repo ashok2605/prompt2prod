@@ -40,7 +40,9 @@ loop from *"what I want"* to *"it's live and verified"*. Prompt2Prod does — on
    one automatic fix round.
 8. **Build** — the commit is built into a container with **Cloud Build** (cached layers, ~20 s) and pushed to **Artifact Registry**.
 9. **Preview** — the image is deployed as a new **Cloud Run revision with its own tag** → a unique preview URL with 0% production traffic.
-10. **Verify** — the *Verifier* writes HTTP smoke tests from the acceptance criteria and runs them against the live preview.
+10. **Verify** — the *Verifier* writes HTTP smoke tests from the acceptance criteria and runs them against the live preview,
+    re-examining failures against the actual responses (wrong check vs. real defect). It then opens the preview in headless
+    Chromium and **Gemini looks at the screenshot** to confirm the UI change visibly landed (multimodal visual QA).
 11. **Release** — in *Autopilot*, if tests ✓ review ✓ live checks ✓, the *Release Manager* shifts 100% traffic to the new
     revision and fast-forwards `main`. In *Approval* mode it waits for a human. **Rollback** restores the previous revision
     and resets `main` in seconds.
@@ -85,8 +87,26 @@ curl -X POST https://prompt2prod-82783179546.asia-south1.run.app/api/webhooks/in
   -d '{"prompt": "Add a GET /api/version endpoint returning the app name and revision", "mode": "approval", "requester": "you"}'
 ```
 
+**Terminal (developer CLI, standard library only):**
+
+```bash
+python cli/p2p.py "Add due dates to tasks and highlight overdue ones in red" --mode approval --name you
+#   Planner › Plan ready: 5 steps · 4 files · low risk · saves ~2.5h of manual work
+#     Coder › edit app.py (+14 −2)
+# ...
+# AWAITING_APPROVAL · Add due dates with overdue highlighting
+# preview:    https://t-k3x9p2---acme-tasks-….run.app
+```
+
 The demo is rate-limited (per user per hour and per day) to protect the free-trial budget. *Releases → Reset demo* restores
 the demo app's baseline.
+
+## Quality
+
+- `backend/tests` — unit tests for the safety-critical pieces: workspace path sandboxing, the live-check matcher, the pytest
+  sandbox and the DORA metrics (`cd backend && pytest -q`).
+- `sample-apps/acme-tasks/tests` — the demo app's own suite, which the crew extends on every change.
+- GitHub Actions CI runs both suites and builds the dashboard on every push.
 
 ## Repository layout
 

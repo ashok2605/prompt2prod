@@ -2,17 +2,53 @@
   "voice": "en-US-Chirp3-HD-Charon",
   "rate": 1.07,
   "segments": [
-    {"id": "s01_title", "text": "Meet Prompt2Prod: an autonomous AI dev crew on Google Cloud, built by team Agentic Minds."},
-    {"id": "s02_problem", "text": "Engineers lose most of their week to the toil around code: writing tests, waiting for reviews, babysitting builds and deployments. Prompt2Prod closes that loop, from a plain-English request to a tested, reviewed and verified change running in production."},
-    {"id": "s03_request", "text": "This is the command center. I describe a change: add a priority field with colored badges and API validation. I choose Autopilot, and press Ship it. Requests can also be spoken, or sent over REST and webhooks from tools like GitHub, Slack or Jira."},
-    {"id": "s04_sandbox_plan", "text": "Right away, a Cloud Run Job spins up an isolated sandbox and checks out the code. The Planner, Gemini 3.1 Pro running on Google's Agent Development Kit, reads the codebase and writes a plan with testable acceptance criteria."},
-    {"id": "s05_tests_code", "text": "The Test Author writes failing tests first. True test-driven development. Then the Coder, on Gemini Flash, edits files with sandboxed tools and runs the suite, iterating until everything is green. Every thought and tool call streams live into this log through Firestore."},
-    {"id": "s06_review_build", "text": "The Reviewer scores the diff and hunts for bugs and security issues; blocking issues go straight back to the Coder. Cloud Build packages the commit in about twenty seconds, and the Deployer ships it as a new Cloud Run revision with its own preview URL, and zero production traffic."},
-    {"id": "s07_verify_release", "text": "The Verifier writes smoke tests and runs them against the live preview. Tests, review and live checks all passed, so Autopilot shifts one hundred percent of traffic to the new revision. Prompt to production in about two minutes, for around ten cents of Gemini tokens."},
-    {"id": "s08_inspect", "text": "Everything is auditable: the plan, the exact diff, the tests the AI wrote, and the review. And here is the new feature, live in production."},
-    {"id": "s09_control", "text": "Prefer a human in the loop? Approval mode waits for your click after you try the preview. And if anything looks wrong, one click rolls production back to the previous revision in seconds."},
-    {"id": "s10_insights", "text": "Insights tracks the DORA metrics: deployment frequency, lead time, change failure rate and time to restore, plus tests written by AI and the cost of every change."},
-    {"id": "s11_arch", "text": "Under the hood: Gemini on Vertex AI with ADK agents; Cloud Run for the API, the sandbox jobs and preview revisions; Cloud Build and Artifact Registry; Firestore for the live event stream; and Firebase for authentication, hosting and real-time updates."},
-    {"id": "s12_close", "text": "Prompt2Prod. From a developer's prompt to production, safely, in minutes. Thank you!"}
+    {
+      "id": "s01_title",
+      "text": "Meet Prompt2Prod: an autonomous AI dev crew on Google Cloud, built by team Agentic Minds."
+    },
+    {
+      "id": "s02_problem",
+      "text": "Engineers lose most of their week to the toil around code: writing tests, waiting for reviews, babysitting builds and deployments. Prompt2Prod closes that loop, from a plain-English request to a tested, reviewed and verified change running in production."
+    },
+    {
+      "id": "s03_request",
+      "text": "This is the command center. I describe a change: add a priority field with colored badges and API validation. I choose Autopilot, and press Ship it. Requests can also be spoken, sent from the terminal with our CLI, or posted by any tool to a REST webhook."
+    },
+    {
+      "id": "s04_sandbox_plan",
+      "text": "Right away, a Cloud Run Job spins up an isolated sandbox and checks out the code. The Planner, Gemini 3.1 Pro running on Google's Agent Development Kit, reads the codebase and writes a plan with testable acceptance criteria."
+    },
+    {
+      "id": "s05_tests_code",
+      "text": "The Test Author writes failing tests first. True test-driven development. Then the Coder, on Gemini Flash, edits files with sandboxed tools and runs the suite, iterating until everything is green. Every thought and tool call streams live into this log through Firestore."
+    },
+    {
+      "id": "s06_review_build",
+      "text": "The Reviewer scores the diff and hunts for bugs and security issues; blocking issues go straight back to the Coder. Cloud Build packages the commit in about twenty seconds, and the Deployer ships it as a new Cloud Run revision with its own preview URL, and zero production traffic."
+    },
+    {
+      "id": "s07_verify_release",
+      "text": "The Verifier runs AI-written smoke tests against the live preview, and Gemini even looks at a screenshot to confirm the UI change. Every gate passed, so Autopilot shifts one hundred percent of traffic to the new revision. Prompt to production in about two minutes, for around fifteen cents of Gemini tokens."
+    },
+    {
+      "id": "s08_inspect",
+      "text": "Everything is auditable: the plan, the exact diff, the tests the AI wrote, and the review. And here is the new feature live in production. In fact, the search box, due dates, progress bar and validation in this app were all shipped by the crew today."
+    },
+    {
+      "id": "s09_control",
+      "text": "Prefer a human in the loop? Approval mode waits for your click after you try the preview. And if anything looks wrong, one click rolls production back to the previous revision in seconds."
+    },
+    {
+      "id": "s10_insights",
+      "text": "Insights tracks the DORA metrics: deployment frequency, lead time, change failure rate and time to restore, plus tests written by AI and the cost of every change."
+    },
+    {
+      "id": "s11_arch",
+      "text": "Under the hood: Gemini on Vertex AI with ADK agents; Cloud Run for the API, the sandbox jobs and preview revisions; Cloud Build and Artifact Registry; Firestore for the live event stream; and Firebase for authentication, hosting and real-time updates."
+    },
+    {
+      "id": "s12_close",
+      "text": "Prompt2Prod. From a developer's prompt to production, safely, in minutes. Thank you!"
+    }
   ]
 }

@@ -467,10 +467,58 @@ class Pipeline:
             if checks2:
                 results, failures = await self.run_checks(checks2, url)
         passed = bool(results) and not failures
-        store.update_task(self.id, {"verify": {"passed": passed, "checks": results}})
+        visual = await self.visual_check(plan, url)
+        store.update_task(self.id, {"verify": {"passed": passed, "checks": results, **({"visual": visual} if visual else {})}})
         n_ok = sum(r["ok"] for r in results)
-        self.stage("verify", "done", f"{n_ok}/{len(results)} live checks passed")
+        self.stage("verify", "done", f"{n_ok}/{len(results)} live checks passed" + (" · visual ✓" if visual and visual.get("passed") else ""))
         return {"passed": passed, "checks": results}
+
+    async def visual_check(self, plan, url):
+        """Screenshot the live preview in headless Chromium and let Gemini (multimodal) judge the UI change."""
+        try:
+            from playwright.async_api import async_playwright  # noqa: WPS433 — optional dependency
+        except ImportError:
+            return None
+        try:
+            self.emit("verify", "Verifier", "tool", "Opening the live preview in headless Chromium for a visual check")
+            async with async_playwright() as pw:
+                browser = await pw.chromium.launch(args=["--no-sandbox", "--disable-dev-shm-usage"])
+                page = await browser.new_page(viewport={"width": 1280, "height": 860}, device_scale_factor=1)
+                await page.goto(url + "/", wait_until="networkidle", timeout=30000)
+                await page.wait_for_timeout(800)
+                png = await page.screenshot(full_page=False)
+                await browser.close()
+            blob_name = f"screenshots/{self.id}.png"
+            await asyncio.to_thread(lambda: gitrepo.bucket().blob(blob_name).upload_from_string(png, content_type="image/png"))
+            from google import genai  # noqa: WPS433
+            from google.genai import types as gtypes  # noqa: WPS433
+
+            client = genai.Client()
+            model = config.MODELS["verifier"]
+            criteria = "\n".join(f"- {c}" for c in plan["acceptance_criteria"])
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=[gtypes.Part.from_bytes(data=png, mime_type="image/png"),
+                          f"Change request:\n{self.task['prompt']}\n\nAcceptance criteria:\n{criteria}"],
+                config=gtypes.GenerateContentConfig(
+                    system_instruction=agents.VISUAL_INSTRUCTION, response_mime_type="application/json",
+                    response_schema=agents.VisualOut, temperature=0.1,
+                    thinking_config=gtypes.ThinkingConfig(thinking_level="LOW"),
+                ),
+            )
+            self.usage.add(model, response.usage_metadata)
+            verdict = agents.VisualOut.model_validate_json(response.text).model_dump()
+            verdict["screenshot"] = f"/api/tasks/{self.id}/screenshot"
+            if not verdict["applicable"]:
+                self.emit("verify", "Verifier", "info", f"Visual check (Gemini multimodal): no visible change expected — {verdict['summary']}")
+            else:
+                self.emit("verify", "Verifier", "success" if verdict["passed"] else "warn",
+                          f"Visual check (Gemini multimodal) {'✓' if verdict['passed'] else '✗'} {verdict['summary']}",
+                          "\n".join(f"• {o}" for o in verdict["observations"]))
+            return verdict
+        except Exception as exc:  # noqa: BLE001 — visual QA is advisory and must never break a release
+            self.emit("verify", "Verifier", "info", f"Visual check skipped: {str(exc)[:120]}")
+            return None
 
     def sanitize_checks(self, raw, url):
         base = urlparse(url)

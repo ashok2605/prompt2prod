@@ -187,6 +187,22 @@ def _task_or_404(task_id):
     return task
 
 
+@app.get("/api/tasks/{task_id}/screenshot", include_in_schema=False)
+def screenshot(task_id: str):
+    from fastapi.responses import Response  # noqa: WPS433
+
+    from . import gitrepo  # noqa: WPS433
+
+    if not task_id.isalnum():
+        raise HTTPException(404, "Not found")
+    blob = gitrepo.bucket().blob(f"screenshots/{task_id}.png")
+    try:
+        data = blob.download_as_bytes()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(404, "No screenshot for this task") from exc
+    return Response(content=data, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.post("/api/tasks/{task_id}/approve")
 def approve(task_id: str, user=Depends(current_user), x_requester_name: Optional[str] = Header(default=None)):
     task = _task_or_404(task_id)

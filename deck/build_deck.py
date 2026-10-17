@@ -173,7 +173,7 @@ slides.append(content_slide("Brief about the idea", f"""
       <li><b>Implement</b> with sandboxed file &amp; test tools, iterating until the suite is green</li>
       <li><b>AI code review</b> — quality score, risk level; blocking issues go back to the Coder</li>
       <li><b>Build</b> with Cloud Build and deploy a <b>live preview revision</b> on Cloud Run</li>
-      <li><b>Verify the live preview</b> with AI-generated smoke tests</li>
+      <li><b>Verify the live preview</b> with AI-generated smoke tests and Gemini visual QA</li>
       <li><b>Release</b> automatically (Autopilot) or with one-click approval — and roll back in one click</li>
     </ol>
     <p class="note">Every thought, tool call and test run streams live to a Firebase-powered dashboard.</p>
@@ -196,7 +196,7 @@ slides.append(content_slide("Opportunities", f"""
         "Quality is enforced by default — <b>tests first, AI review, live verification</b> — while humans stay in control with "
         "approval mode, a preview URL for every change and <b>instant rollback</b>.", "#34A853", "⚙️")}
   {card("USP", "<ul><li><b>Test-first, self-healing</b> agent crew (Google ADK)</li><li><b>Live preview URL per change</b> via Cloud Run revision tags</li>"
-        "<li><b>AI smoke tests</b> against the deployed preview</li><li><b>Autopilot gate</b> + human approval + one-click rollback</li>"
+        "<li><b>AI smoke tests + multimodal visual QA</b> on the deployed preview</li><li><b>Autopilot gate</b> + human approval + one-click rollback</li>"
         "<li>Built-in <b>DORA metrics</b> &amp; cost per change</li><li>Requests from <b>anywhere</b>: UI, voice, REST, webhooks</li></ul>",
         "#EA4335", "⭐")}
 </div>"""))
@@ -209,9 +209,9 @@ feats = [
     ("💻", "Coder agent", "Sandboxed read/write/edit/search/run-tests tools; iterates to green."),
     ("🩹", "Self-healing", "Failures are fed back automatically — up to 3 healing attempts."),
     ("🛡️", "AI code review", "Score 0-100, risk, issues; blocking issues trigger an automatic fix round."),
-    ("📦", "Real builds", "Cloud Build container per change, digest-pinned in Artifact Registry."),
-    ("🔗", "Preview per change", "Tagged Cloud Run revision with its own URL and 0% production traffic."),
-    ("📡", "Live verification", "Verifier agent writes HTTP smoke tests and runs them on the preview."),
+    ("🔗", "Preview per change", "Cloud Build image → tagged Cloud Run revision with its own URL, 0% traffic."),
+    ("📡", "Live verification", "Verifier writes HTTP smoke tests, runs them on the preview and self-corrects bad checks."),
+    ("👁️", "Visual QA (multimodal)", "Gemini looks at a screenshot of the live preview to confirm the UI change."),
     ("🚦", "Autopilot or approval", "Release when all gates pass, or wait for one-click human approval."),
     ("↩️", "Instant rollback", "Traffic back to the previous revision + git main reset in seconds."),
     ("📊", "DORA & cost insights", "Deploy frequency, lead time, change-failure rate, MTTR, tokens & $ per change."),

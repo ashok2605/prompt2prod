@@ -1,0 +1,14 @@
+[
+  {"id": "title",    "type": "card", "image": "cards/title.png", "narration": "s01_title", "min": 7},
+  {"id": "problem",  "type": "clip", "from": "home", "to": "typing_start", "narration": "s02_problem", "max_speed": 1.6},
+  {"id": "request",  "type": "clip", "from": "typing_start", "to": "submitted", "narration": "s03_request", "to_offset": 1.5, "max_speed": 1.4},
+  {"id": "plan",     "type": "clip", "from": "submitted", "to": "plan_done", "from_offset": 1.5, "to_offset": 2.0, "narration": "s04_sandbox_plan"},
+  {"id": "code",     "type": "clip", "from": "plan_done", "to": "code_done", "from_offset": 2.0, "to_offset": 1.5, "narration": "s05_tests_code"},
+  {"id": "build",    "type": "clip", "from": "code_done", "to": "preview_done", "from_offset": 1.5, "to_offset": 1.5, "narration": "s06_review_build"},
+  {"id": "release",  "type": "clip", "from": "preview_done", "to": "inspect_start", "from_offset": 1.5, "narration": "s07_verify_release"},
+  {"id": "inspect",  "type": "clip", "from": "inspect_start", "to": "inspect_done", "narration": "s08_inspect", "max_speed": 1.3},
+  {"id": "control",  "type": "clip", "from": "control_start", "to": "rollback_done", "narration": "s09_control", "max_speed": 2.5},
+  {"id": "insights", "type": "clip", "from": "insights", "to": "insights_done", "narration": "s10_insights", "max_speed": 1.3},
+  {"id": "arch",     "type": "card", "image": "cards/arch.png", "narration": "s11_arch", "zoom": false},
+  {"id": "close",    "type": "card", "image": "cards/close.png", "narration": "s12_close", "min": 7}
+]

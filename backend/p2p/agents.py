@@ -4,6 +4,8 @@ Planner, Test Author, Coder, Reviewer and Verifier are `LlmAgent`s. The Test Aut
 and Coder act on the task's git workspace through sandboxed function tools; every
 tool call is streamed to the live dashboard log.
 """
+import asyncio
+import difflib
 import re
 from typing import Literal
 
@@ -62,6 +64,13 @@ class VerifyOut(BaseModel):
     checks: list[SmokeCheck]
 
 
+class VisualOut(BaseModel):
+    applicable: bool = Field(description="false when the change has no visible effect on this page (e.g. API-only)")
+    passed: bool = Field(description="true if the screenshot visibly satisfies the UI-related acceptance criteria")
+    summary: str = Field(description="one sentence verdict")
+    observations: list[str] = Field(description="2-5 concrete things you can see (or cannot see) in the screenshot")
+
+
 # ---------------------------------------------------------------- instructions
 
 PLANNER_INSTRUCTION = """You are the Planner of Prompt2Prod, an autonomous software crew that ships changes to production.
@@ -110,6 +119,12 @@ Design 3-6 HTTP smoke checks that prove the requested behaviour works in the dep
 - When creating data, prefix titles with "[smoke]" so it is recognisable."""
 
 
+VISUAL_INSTRUCTION = """You are the visual QA reviewer of Prompt2Prod. You get a screenshot of the live preview of a web app
+right after an AI-generated change was deployed, plus the change request and its acceptance criteria.
+Judge ONLY what is visible: is the requested UI change present and does the page look intact (no broken layout, no raw
+template code, no error page)? If the change has no visible effect on this page (API-only), set applicable=false and passed=true."""
+
+
 # ---------------------------------------------------------------- usage meter
 
 class Usage:
@@ -143,6 +158,15 @@ class Usage:
 
 
 # ---------------------------------------------------------------- tools
+
+def edit_preview(path, before, after, max_lines=80):
+    """Compact unified diff of one edit, shown when a log event is expanded."""
+    lines = list(difflib.unified_diff(before.splitlines(), after.splitlines(), f"a/{path}", f"b/{path}",
+                                      lineterm="", n=2))
+    if len(lines) > max_lines:
+        lines = lines[:max_lines] + [f"… {len(lines) - max_lines} more lines"]
+    return "\n".join(lines) or None
+
 
 class Toolkit:
     """Workspace tools handed to ADK agents. Each call is mirrored into the live log."""
@@ -206,7 +230,8 @@ class Toolkit:
                 return {"error": str(exc)}
             adds, dels = line_delta(before, content)
             kit.files_written.add(rel)
-            kit._log(f"{'write_file' if before else 'create_file'} {rel} (+{adds} −{dels})")
+            kit._log(f"{'write_file' if before else 'create_file'} {rel} (+{adds} −{dels})",
+                     detail=edit_preview(rel, before, content))
             return {"ok": True, "path": rel}
 
         def replace_in_file(path: str, old_text: str, new_text: str) -> dict:
@@ -236,7 +261,7 @@ class Toolkit:
             kit.ws.write(rel, after)
             adds, dels = line_delta(before, after)
             kit.files_written.add(rel)
-            kit._log(f"edit {rel} (+{adds} −{dels})")
+            kit._log(f"edit {rel} (+{adds} −{dels})", detail=edit_preview(rel, before, after))
             return {"ok": True, "path": rel}
 
         def delete_file(path: str) -> dict:
@@ -317,12 +342,17 @@ async def run_agent(*, role, name, instruction, prompt, emit, stage, label, usag
     primary = config.MODELS[role]
     candidates = [primary] + [m for m in config.FALLBACK_MODELS if m != primary]
     last_exc = None
-    for model in candidates:
+    budget = config.AGENT_TIMEOUTS.get(role, 120)
+    for i, model in enumerate(candidates):
+        last = i == len(candidates) - 1
         try:
-            text, output = await _run_once(model, name, instruction, prompt, emit, stage, label, usage,
-                                           tools, output_schema, max_llm_calls,
-                                           config.THINKING.get(role, "LOW") if thinking else None)
+            run = _run_once(model, name, instruction, prompt, emit, stage, label, usage, tools, output_schema,
+                            max_llm_calls, config.THINKING.get(role, "LOW") if thinking else None)
+            text, output = await (run if last else asyncio.wait_for(run, timeout=budget))
             return text, output, model
+        except asyncio.TimeoutError as exc:
+            last_exc = exc
+            emit(stage, label, "warn", f"{model} exceeded its {budget}s latency budget; switching to {candidates[i + 1]}")
         except Exception as exc:
             if not _retryable(exc):
                 raise
