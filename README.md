@@ -67,6 +67,7 @@ loop from *"what I want"* to *"it's live and verified"*. Prompt2Prod does — on
 | **Firestore** | Tasks, per-task live event stream (thousands of events/day), projects & release history, distributed locks. |
 | **Firebase** | Auth (anonymous sign-in), Hosting (`prompt2prod.web.app`, `/api` rewrites to Cloud Run), JS SDK realtime `onSnapshot` listeners; Firestore security rules make clients read-only. |
 | **Cloud Storage** | Git bundles as the source of truth for each app (main + task branches) and build contexts. |
+| **Secret Manager** | The Firebase web config (a browser key restricted to Auth + Firestore and to the dashboard's domains) and the intake key; Cloud Run injects them at runtime, nothing secret lives in the repo. |
 | **IAM** | Least-privilege service accounts; the deployed app runs as a service account with **zero** roles. |
 
 ## Measured results
@@ -93,15 +94,16 @@ From 9 real end-to-end runs on the demo app (live numbers on the dashboard's *In
 *"Add due dates to tasks and highlight overdue ones in red"*, pick **Autopilot** or **Approval**, press **Ship it** and watch the
 crew work. Open the preview URL, approve, check production, roll back — and see the DORA metrics update.
 
-**REST / webhook:**
+**REST / webhook** (the intake key lives in Google Cloud Secret Manager, never in this repo):
 
 ```bash
+export P2P_INTAKE_KEY=$(gcloud secrets versions access latest --secret=prompt2prod-intake-key)
 curl -X POST https://prompt2prod-82783179546.asia-south1.run.app/api/webhooks/intake \
-  -H "X-Intake-Key: REDACTED_INTAKE_KEY" -H "Content-Type: application/json" \
+  -H "X-Intake-Key: $P2P_INTAKE_KEY" -H "Content-Type: application/json" \
   -d '{"prompt": "Add a GET /api/version endpoint returning the app name and revision", "mode": "approval", "requester": "you"}'
 ```
 
-**Terminal (developer CLI, standard library only):**
+**Terminal (developer CLI, standard library only, uses the same `P2P_INTAKE_KEY`):**
 
 ```bash
 python cli/p2p.py "Add due dates to tasks and highlight overdue ones in red" --mode approval --name you
@@ -165,6 +167,8 @@ Models, thinking levels and limits are configurable with environment variables (
 - Autopilot only releases when tests, AI review and live checks all pass; Approval mode, Reject and one-click Rollback keep
   humans in control. The Planner declines unsafe or out-of-scope requests.
 - Firebase-authenticated intake, per-user/day rate limits, LLM call caps per agent run, and cost metering per change.
+- Secrets live in Google Cloud Secret Manager (injected by Cloud Run); the browser API key is restricted to the Auth and
+  Firestore APIs and to the dashboard's own domains, and the sandbox strips secrets from the environment of code under test.
 
 ## Roadmap
 

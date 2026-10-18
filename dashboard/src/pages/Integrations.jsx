@@ -25,7 +25,7 @@ export function Integrations() {
   const projectId = projects[0]?.id || 'acme-tasks'
   const curl = [
     `curl -X POST ${origin}/api/webhooks/intake \\`,
-    `  -H 'X-Intake-Key: ${config?.intakeKey || '<your-intake-key>'}' \\`,
+    `  -H "X-Intake-Key: $P2P_INTAKE_KEY" \\`,
     `  -H 'Content-Type: application/json' \\`,
     `  -d '{"prompt":"Add a GET /api/version endpoint returning the app name","projectId":"${projectId}","mode":"approval","requester":"curl"}'`,
   ].join('\n')

@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 from . import config
 
-_SAFE_ENV_DROP = ("PYTHONPATH", "TASK_ID", "INTAKE_KEY")
+_SAFE_ENV_DROP = ("PYTHONPATH", "TASK_ID", "INTAKE_KEY", "FIREBASE_WEB_CONFIG")
 
 
 def _tail(text, limit):

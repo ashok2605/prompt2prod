@@ -112,7 +112,7 @@ Errors: JSON `{"detail": "message"}` with 4xx/5xx.
 
 | Method & path | Body | Returns |
 |---|---|---|
-| `GET /api/config` | – | `{firebase:{apiKey,authDomain,projectId,appId,messagingSenderId,storageBucket}, projects:[project], limits:{perUserPerHour, perDay}, models:{planner,coder,reviewer}, version}` |
+| `GET /api/config` | – | `{firebase:{apiKey,authDomain,projectId,appId,messagingSenderId,storageBucket}, projects:[project], limits:{perUserPerHour, perDay}, models:{planner,coder,reviewer}, intakeEnabled, version}` |
 | `POST /api/tasks` | `{projectId, prompt, mode, source}` | `{id}` (201). 429 when rate-limited |
 | `GET /api/tasks?limit=50` | – | `{tasks:[task without diff]}` |
 | `GET /api/tasks/{id}` | – | task |

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """p2p — ship a change from your terminal with the Prompt2Prod AI crew.
 
+    export P2P_INTAKE_KEY=$(gcloud secrets versions access latest --secret=prompt2prod-intake-key)
     python cli/p2p.py "Add a GET /api/version endpoint" [--mode approval] [--name Ashok]
 
 Submits the request through the intake API and streams the crew's live log until the change is
@@ -15,7 +16,7 @@ import urllib.error
 import urllib.request
 
 API = os.environ.get("P2P_API", "https://prompt2prod-82783179546.asia-south1.run.app")
-KEY = os.environ.get("P2P_INTAKE_KEY", "REDACTED_INTAKE_KEY")
+KEY = os.environ.get("P2P_INTAKE_KEY")  # never hardcoded: lives in Google Cloud Secret Manager
 COLORS = {"Orchestrator": 245, "Planner": 75, "Test Author": 141, "Coder": 44, "Test Runner": 77, "Reviewer": 220,
           "Builder": 208, "Deployer": 205, "Verifier": 43, "Release Manager": 99}
 KIND = {"success": "✓", "warn": "!", "error": "✗", "tool": "›", "thought": "…", "info": "·"}
@@ -45,6 +46,9 @@ def main():
     parser.add_argument("--name", default=os.environ.get("USER", "cli"))
     parser.add_argument("--project", default="acme-tasks")
     args = parser.parse_args()
+    if not KEY:
+        sys.exit("Set P2P_INTAKE_KEY first. It is stored in Google Cloud Secret Manager:\n"
+                 "  export P2P_INTAKE_KEY=$(gcloud secrets versions access latest --secret=prompt2prod-intake-key)")
 
     created = call("POST", "/api/webhooks/intake", {"prompt": args.prompt, "mode": args.mode, "source": "api",
                                                     "projectId": args.project, "requester": f"{args.name} · CLI"},

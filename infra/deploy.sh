@@ -21,7 +21,7 @@ echo "▶ APIs"
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
   aiplatform.googleapis.com firestore.googleapis.com firebase.googleapis.com firebasehosting.googleapis.com \
   firebaserules.googleapis.com identitytoolkit.googleapis.com storage.googleapis.com iam.googleapis.com \
-  logging.googleapis.com --project "$PROJECT_ID"
+  logging.googleapis.com secretmanager.googleapis.com apikeys.googleapis.com --project "$PROJECT_ID"
 
 echo "▶ Data plane: Firestore, bucket, Artifact Registry"
 gcloud firestore databases create --location="$REGION" --project "$PROJECT_ID" 2>/dev/null || true
@@ -39,6 +39,22 @@ done
 gcloud iam service-accounts add-iam-policy-binding "$APP_SA" --member="serviceAccount:${SA}" \
   --role=roles/iam.serviceAccountUser --project "$PROJECT_ID" --quiet >/dev/null
 
+echo "▶ Secrets (Google Cloud Secret Manager) — nothing secret is committed to the repo"
+# Firebase web config: create a browser key restricted to Auth + Firestore and your dashboard domains, then
+#   FIREBASE_WEB_CONFIG='{"apiKey":"…","authDomain":"…","projectId":"…","appId":"…"}' ./infra/deploy.sh
+if ! gcloud secrets describe prompt2prod-firebase-web-config --project "$PROJECT_ID" >/dev/null 2>&1; then
+  printf '%s' "${FIREBASE_WEB_CONFIG:?set FIREBASE_WEB_CONFIG to the Firebase web config JSON}" | \
+    gcloud secrets create prompt2prod-firebase-web-config --data-file=- --project "$PROJECT_ID"
+fi
+if ! gcloud secrets describe prompt2prod-intake-key --project "$PROJECT_ID" >/dev/null 2>&1; then
+  python3 -c "import secrets; print(secrets.token_urlsafe(32), end='')" | \
+    gcloud secrets create prompt2prod-intake-key --data-file=- --project "$PROJECT_ID"
+fi
+for secret in prompt2prod-firebase-web-config prompt2prod-intake-key; do
+  gcloud secrets add-iam-policy-binding "$secret" --member="serviceAccount:${SA}" \
+    --role=roles/secretmanager.secretAccessor --project "$PROJECT_ID" --quiet >/dev/null
+done
+
 echo "▶ Firestore security rules"
 firebase deploy --only firestore:rules --project "$PROJECT_ID" --non-interactive
 
@@ -55,7 +71,9 @@ gcloud run jobs deploy prompt2prod-runner --image="${IMAGE}:${TAG}" --region="$R
 echo "▶ API + dashboard (Cloud Run service)"
 gcloud run deploy prompt2prod --image="${IMAGE}:${TAG}" --region="$REGION" --service-account="$SA" \
   --allow-unauthenticated --cpu=1 --memory=1Gi --min-instances=1 --max-instances=4 --cpu-throttling \
-  --timeout=900 --set-env-vars="EXECUTION_MODE=job,APP_VERSION=${TAG}" --project "$PROJECT_ID"
+  --timeout=900 --set-env-vars="EXECUTION_MODE=job,APP_VERSION=${TAG}" \
+  --set-secrets="FIREBASE_WEB_CONFIG=prompt2prod-firebase-web-config:latest,INTAKE_KEY=prompt2prod-intake-key:latest" \
+  --project "$PROJECT_ID"
 
 echo "▶ Demo project (baseline revision of the sample app)"
 (cd backend && python -m scripts.bootstrap_project ../sample-apps/acme-tasks)

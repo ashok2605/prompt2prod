@@ -1,4 +1,5 @@
 """Prompt2Prod API (Cloud Run service): intake, approvals, releases, metrics + the dashboard."""
+import hmac
 import os
 import threading
 import time
@@ -143,12 +144,12 @@ def health():
 @app.get("/api/config")
 def get_config():
     return {
-        "firebase": config.FIREBASE_WEB_CONFIG,
+        "firebase": config.firebase_web_config(),
         "projects": store.jsonable(store.list_projects()),
         "limits": {"perUserPerHour": config.LIMIT_PER_USER_PER_HOUR, "perDay": config.LIMIT_PER_DAY},
         "models": config.MODELS,
         "region": config.REGION,
-        "intakeKey": config.INTAKE_KEY,
+        "intakeEnabled": bool(config.intake_key()),
         "version": config.VERSION,
     }
 
@@ -283,7 +284,10 @@ def reset_project(project_id: str, user=Depends(current_user), x_requester_name:
 
 @app.post("/api/webhooks/intake", status_code=201)
 def intake(body: IntakeIn, request: Request, x_intake_key: Optional[str] = Header(default=None)):
-    if not x_intake_key or x_intake_key != config.INTAKE_KEY:
+    expected = config.intake_key()
+    if not expected:
+        raise HTTPException(503, "Intake is not configured")
+    if not x_intake_key or not hmac.compare_digest(x_intake_key, expected):
         raise HTTPException(401, "Invalid X-Intake-Key")
     enforce_ip_limit(request)
     enforce_limits()

@@ -57,24 +57,41 @@ MODEL_PRICES = {
 MAX_TEST_ATTEMPTS = int(os.environ.get("MAX_TEST_ATTEMPTS", "3"))
 LIMIT_PER_USER_PER_HOUR = int(os.environ.get("LIMIT_PER_USER_PER_HOUR", "6"))
 LIMIT_PER_DAY = int(os.environ.get("LIMIT_PER_DAY", "40"))
-INTAKE_KEY = os.environ.get("INTAKE_KEY", "REDACTED_INTAKE_KEY")
 PREVIEW_TAGS_TO_KEEP = int(os.environ.get("PREVIEW_TAGS_TO_KEEP", "12"))
 
-FIREBASE_WEB_CONFIG = json.loads(
-    os.environ.get(
-        "FIREBASE_WEB_CONFIG",
-        json.dumps(
-            {
-                "apiKey": "REDACTED_FIREBASE_KEY",
-                "authDomain": f"{PROJECT_ID}.firebaseapp.com",
-                "projectId": PROJECT_ID,
-                "storageBucket": f"{PROJECT_ID}.firebasestorage.app",
-                "messagingSenderId": PROJECT_NUMBER,
-                "appId": "1:82783179546:web:48c764084222faca8452a3",
-            }
-        ),
-    )
-)
+# ---------------------------------------------------------------- secrets (Google Cloud Secret Manager)
+# Cloud Run injects them as environment variables (`--set-secrets`). Locally they are read from Secret
+# Manager with your Application Default Credentials. Nothing secret is ever committed to the repository.
+FIREBASE_CONFIG_SECRET = os.environ.get("FIREBASE_CONFIG_SECRET", "prompt2prod-firebase-web-config")
+INTAKE_KEY_SECRET = os.environ.get("INTAKE_KEY_SECRET", "prompt2prod-intake-key")
+_secret_cache = {}
+
+
+def secret(name, env_var):
+    if os.environ.get(env_var):
+        return os.environ[env_var]
+    if name not in _secret_cache:
+        try:
+            from google.cloud import secretmanager  # noqa: WPS433 — only needed outside Cloud Run
+
+            client = secretmanager.SecretManagerServiceClient()
+            version = f"projects/{PROJECT_ID}/secrets/{name}/versions/latest"
+            _secret_cache[name] = client.access_secret_version(name=version).payload.data.decode()
+        except Exception as exc:  # noqa: BLE001 — a missing secret disables the feature, never crashes
+            print(f"[config] secret {name} unavailable: {exc}", flush=True)
+            _secret_cache[name] = None
+    return _secret_cache[name]
+
+
+def firebase_web_config():
+    """Firebase web SDK config (restricted browser API key) for the dashboard."""
+    raw = secret(FIREBASE_CONFIG_SECRET, "FIREBASE_WEB_CONFIG")
+    return json.loads(raw) if raw else None
+
+
+def intake_key():
+    """Shared key that authorises POST /api/webhooks/intake (CLI, scripts, other tools)."""
+    return secret(INTAKE_KEY_SECRET, "INTAKE_KEY")
 
 VERSION = os.environ.get("APP_VERSION", "1.0.0")
 
