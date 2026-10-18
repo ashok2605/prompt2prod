@@ -164,6 +164,7 @@ slides.append(f"""
     <ol type="a">
       <li>Team name: <b>Agentic Minds</b></li>
       <li>Team leader name: <b>Madamanchi Ashok Chowdary</b></li>
+      <li>Team member name: <b>Venkat Praneeth Reddy</b></li>
       <li>Problem Statement: <b>Future of Work &amp; Enterprise Productivity</b> — engineers lose most of their week
       to the toil around code (tests, reviews, builds, deployments). <b>Prompt2Prod</b> turns a plain-English request into a
       planned, tested, reviewed and deployed change.</li>
